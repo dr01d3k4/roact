@@ -1,4 +1,6 @@
 local assign = require(script.Parent.assign)
+local bind = require(script.Parent.bind)
+local createTreeCache = require(script.Parent.createTreeCache)
 local ComponentLifecyclePhase = require(script.Parent.ComponentLifecyclePhase)
 local Type = require(script.Parent.Type)
 local Symbol = require(script.Parent.Symbol)
@@ -170,6 +172,16 @@ function Component:setState(mapState)
 end
 
 --[[
+	Binds the given function with self and given arguments. Returns a function
+	that calls the original given function. Memoizes the function+arguments
+	combination so it always returns the same bound function for the given input.
+	Useful for passing callbacks that are methods of your component through props.
+]]
+function Component:bind(func, ...)
+	return self._boundFuncCache:get(func, ...) or self._boundFuncCache:set(bind(func, self, ...), func, ...)
+end
+
+--[[
 	Returns the stack trace of where the element was created that this component
 	instance's properties are based on.
 
@@ -315,6 +327,8 @@ function Component:__mount(reconciler, virtualNode)
 
 	local newContext = assign({}, virtualNode.legacyContext)
 	instance._context = newContext
+
+	instance._boundFuncCache = createTreeCache()
 
 	instance.state = assign({}, instance:__getDerivedState(instance.props, {}))
 
